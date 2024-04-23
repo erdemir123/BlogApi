@@ -4,6 +4,7 @@
 ------------------------------------------------------- */
 //Controllers
 require("express-async-errors");
+const passwordEncrypt = require("../helpers/passwordEncrypt");
 const { User } = require("../models/user.models");
 
 module.exports.User = {
@@ -51,6 +52,47 @@ module.exports.User = {
     res.sendStatus(data.deletedCount >= 1 ? 204 : 400).send({
       error: false,
       data: data,
+    });
+  },
+  login: async (req, res) => {
+    const { email, password } = req.body;
+    if (email && password) {
+      const user = await User.findOne({ email: email });
+      if (user && user.password == passwordEncrypt(password)) {
+        // Do something when login is successful
+
+        // session kaydetme kullanıcı giriş yaptı
+
+        req.session = {
+          //email: user.email,
+          id: user.id,
+          password: user.password,
+        };
+
+        if (req.body.remindMe) {
+          res.session.remindMe = req.body.remindMe;
+          req.sessionOptions.maxAge = 1000 * 60 * 60 * 24 * 3; //maxAge yoksa session varsa cookie /// session tarayıcı kapanan kadar duru kapanınca silinir
+        }
+
+        res.status(200).send({
+          errorr: false,
+          message: "login Ok",
+          user,
+        });
+      } else {
+        res.errorStatusCode = 401;
+        throw new Error("Invalid email or password");
+      }
+    } else {
+      res.errorStatusCode = 401;
+      throw new Error("Email and password are required");
+    }
+  },
+  logout: async (req, res) => {
+    req.session = null;
+    res.status(200).send({
+      errorr: false,
+      message: "logOut Ok",
     });
   },
 };
